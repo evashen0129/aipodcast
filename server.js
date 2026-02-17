@@ -59,7 +59,9 @@ const SYSTEM_PROMPT = `你正在为一位**准妈妈播客制作人**服务。�
 
 示例（有流程）：{"items":[...],"opening":"...","visualCode":"graph TD\\n  A[起点]-->B[过程]\\n  B-->C[结果]"}
 示例（思维导图保底）：{"items":[...],"opening":"...","visualCode":"mindmap\\n  root((文稿))\\n    要点1\\n    要点2\\n    要点3"}
-只输出上述 JSON 一行。`;
+只输出上述 JSON 一行。
+
+请务必只返回纯净的 JSON 格式数据。严禁包含任何 Markdown 代码块（如 ```json）、严禁包含任何前缀或后缀文字。格式必须严格遵守：{"summary": "...", "outline": "..."}`;
 
 function parseClaudeResponse(text) {
   const openMarker = '【开场白】';
