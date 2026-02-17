@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>播客金句提纯助手</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <script>
+    if (typeof mermaid !== 'undefined') {
+      mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: { 'primaryColor': '#E9D5FF' } });
+    }
+  </script>
+  <style>
+    :root {
+      --paper: #f5f0e6;
+      --paper-shadow: #e8e0d0;
+      --ink: #2c2c2c;
+      --ink-soft: #4a4a4a;
+      --accent: #8b6914;
+      --card-bg: rgba(255, 252, 245, 0.9);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--paper);
+      background-image:
+        radial-gradient(ellipse at 20% 30%, rgba(230, 220, 200, 0.4) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 70%, rgba(210, 195, 170, 0.3) 0%, transparent 50%);
+      color: var(--ink);
+      font-family: "Noto Serif SC", "Source Han Serif SC", serif;
+      font-size: 16px;
+      line-height: 1.75;
+      padding: 1.5rem;
+    }
+
+    h1 {
+      font-family: "ZCOOL XiaoWei", "Noto Serif SC", serif;
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--ink);
+      margin: 0 0 1.25rem 0;
+      text-align: center;
+      letter-spacing: 0.08em;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 768px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      box-shadow: 0 2px 12px var(--paper-shadow);
+      border: 1px solid rgba(180, 170, 150, 0.25);
+    }
+
+    .panel h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin: 0 0 0.75rem 0;
+      padding-bottom: 0.4rem;
+      border-bottom: 2px solid rgba(139, 105, 20, 0.25);
+      letter-spacing: 0.05em;
+    }
+
+    .notes-box {
+      min-height: 280px;
+      width: 100%;
+      padding: 1rem;
+      font-family: inherit;
+      font-size: 0.95rem;
+      line-height: 1.7;
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.5);
+      border: 1px solid rgba(180, 170, 150, 0.4);
+      border-radius: 8px;
+      resize: vertical;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .notes-box:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(139, 105, 20, 0.15);
+    }
+
+    .notes-box::placeholder {
+      color: var(--ink-soft);
+      opacity: 0.7;
+    }
+
+    .outline-content {
+      color: var(--ink);
+      font-size: 0.95rem;
+      line-height: 1.8;
+      min-height: 120px;
+    }
+
+    .outline-content .outline-placeholder {
+      color: var(--ink-soft);
+      opacity: 0.8;
+      margin: 0;
+    }
+
+    /* 高级笔记卡片风：每条大纲独立卡片，加大间距增加呼吸感 */
+    .outline-content .outline-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .outline-content .outline-card {
+      background: rgba(255, 252, 245, 0.95);
+      border-radius: 12px;
+      padding: 1.15rem 1.25rem;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+      border: 1px solid rgba(180, 170, 150, 0.2);
+      line-height: 1.8;
+    }
+
+    .outline-content .outline-card > .core-line {
+      margin-bottom: 0.5rem;
+    }
+
+    .outline-content .outline-card > div + div {
+      margin-top: 0.4rem;
+    }
+
+    .outline-content .outline-card + .outline-card {
+      margin-top: 0;
+    }
+
+    /* AI 洞察小标签 */
+    .outline-content .insight-tag {
+      display: inline-block;
+      font-size: 0.75rem;
+      color: #5c4a7a;
+      background: rgba(180, 160, 220, 0.25);
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+
+    .outline-content .insight-tag::before {
+      content: 'AI 洞察 · ';
+      opacity: 0.9;
+    }
+
+    /* 核心观点加粗并略放大 */
+    .outline-content .outline-card .core-line,
+    .outline-content .outline-card strong {
+      color: var(--accent);
+      font-weight: 600;
+      font-size: 1.02em;
+    }
+
+    .outline-content .outline-card ul {
+      margin: 0.6rem 0 0 0;
+      padding-left: 1.35rem;
+      list-style-type: disc;
+    }
+
+    .outline-content .outline-card ul ul {
+      padding-left: 1.2rem;
+      margin: 0.25rem 0 0 0;
+      list-style-type: circle;
+    }
+
+    .outline-content .outline-card li {
+      margin-bottom: 0.4rem;
+      line-height: 1.7;
+    }
+
+    .outline-content .outline-card li:last-child {
+      margin-bottom: 0;
+    }
+
+    .outline-content p {
+      margin: 0.5rem 0 0.75rem 0;
+    }
+
+    .outline-content strong {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .outline-content .outline-list {
+      padding-left: 0;
+      list-style: none;
+      margin: 0;
+    }
+
+    .outline-content.is-loading {
+      color: var(--ink-soft);
+      opacity: 0.9;
+    }
+
+    /* 图表区域：高级笔记卡片风，与大纲统一配色 */
+    .chart-container.note-card {
+      background: rgba(255, 252, 245, 0.95);
+      border-radius: 12px;
+      padding: 1.15rem 1.25rem;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+      border: 1px solid rgba(180, 170, 150, 0.2);
+      margin-bottom: 1.25rem;
+    }
+    .chart-container .mermaid-wrap {
+      min-height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .chart-container .mermaid-wrap svg {
+      max-width: 100%;
+    }
+
+    .opening-section {
+      grid-column: 1 / -1;
+      margin-top: 0.5rem;
+    }
+
+    .opening-section .opening-text {
+      margin: 0;
+      padding: 1rem 1.25rem;
+      font-size: 1rem;
+      line-height: 1.8;
+      color: var(--ink);
+      background: rgba(255, 252, 245, 0.95);
+      border-radius: 8px;
+      border: 1px solid rgba(180, 170, 150, 0.3);
+    }
+
+    .opening-text .highlight {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* ADHD 专注模式：隐藏背景装饰 */
+    body.focus-mode {
+      background: #fafafa;
+      background-image: none;
+    }
+    body.focus-mode .panel {
+      background: #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      border-color: rgba(0,0,0,0.08);
+    }
+    body.focus-mode .opening-section,
+    body.focus-mode .panel:not(.notes-panel) {
+      opacity: 0.6;
+    }
+    body.focus-mode .notes-panel {
+      opacity: 1;
+    }
+    body.focus-mode .notes-editor-wrap {
+      background: #fff;
+      border-color: rgba(0,0,0,0.12);
+    }
+
+    /* 左侧可实时编辑区域 */
+    .notes-panel .panel-head-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+    .notes-panel .panel-head-row h2 {
+      margin: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+    .focus-toggle-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: var(--ink-soft);
+    }
+    .focus-toggle {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      background: rgba(0,0,0,0.12);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .focus-toggle.on {
+      background: var(--accent);
+    }
+    .focus-toggle::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 20px;
+      height: 20px;
+      background: #fff;
+      border-radius: 50%;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      transition: transform 0.2s;
+    }
+    .focus-toggle.on::after {
+      transform: translateX(20px);
+    }
+
+    .notes-editor-wrap {
+      position: relative;
+      min-height: 280px;
+      padding: 1rem;
+      font-family: inherit;
+      font-size: 0.95rem;
+      line-height: 1.7;
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.5);
+      border: 1px solid rgba(180, 170, 150, 0.4);
+      border-radius: 8px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .notes-editor-wrap:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(139, 105, 20, 0.15);
+    }
+    .line-highlight {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 1.7em;
+      background: rgba(139, 105, 20, 0.12);
+      border-radius: 4px;
+      pointer-events: none;
+      opacity: 0;
+      transition: top 0.1s ease-out, opacity 0.15s;
+    }
+    .notes-editor-wrap.has-caret .line-highlight {
+      opacity: 1;
+    }
+    body.focus-mode .notes-editor-wrap .line-highlight {
+      background: rgba(139, 105, 20, 0.22);
+    }
+    .notes-editor {
+      position: relative;
+      z-index: 1;
+      min-height: 240px;
+      outline: none;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .notes-editor:empty::before {
+      content: attr(data-placeholder);
+      color: var(--ink-soft);
+      opacity: 0.7;
+    }
+
+    /* 提纯按钮 */
+    .btn-refine-wrap {
+      margin-top: 1rem;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .btn-refine {
+      padding: 0.6rem 1.4rem;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #fff;
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s, opacity 0.2s;
+      letter-spacing: 0.04em;
+    }
+    .btn-refine:hover:not(:disabled) {
+      background: #6d5210;
+    }
+    .btn-refine:disabled {
+      cursor: not-allowed;
+      opacity: 0.85;
+    }
+
+    /* 大纲区淡入 */
+    .outline-content.fade-in {
+      animation: outlineFadeIn 0.4s ease-out forwards;
+    }
+    @keyframes outlineFadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    /* 右侧大纲区「思考中」闪烁 */
+    .panel.golden-panel.thinking {
+      animation: panelThink 1s ease-in-out;
+    }
+    @keyframes panelThink {
+      0%, 100% { opacity: 1; box-shadow: 0 2px 12px var(--paper-shadow); }
+      25% { opacity: 0.6; box-shadow: 0 0 0 2px rgba(139, 105, 20, 0.3); }
+      50% { opacity: 1; box-shadow: 0 2px 16px rgba(139, 105, 20, 0.2); }
+      75% { opacity: 0.7; box-shadow: 0 0 0 2px rgba(139, 105, 20, 0.25); }
+    }
+  </style>
+</head>
+<body>
+  <h1>播客金句提纯助手</h1>
+
+  <div class="layout">
+    <section class="panel notes-panel">
+      <div class="panel-head-row">
+        <h2>📒 原始笔记</h2>
+        <label class="focus-toggle-wrap">
+          <span class="focus-toggle" id="focusToggle" role="switch" aria-checked="false" tabindex="0"></span>
+          <span>ADHD 专注模式</span>
+        </label>
+      </div>
+      <div class="notes-editor-wrap" id="notesWrap">
+        <div class="line-highlight" id="lineHighlight"></div>
+        <div
+          class="notes-editor"
+          id="notesEditor"
+          contenteditable="true"
+          data-placeholder="在这里粘贴或输入你的读书笔记……"
+          spellcheck="true"
+        ></div>
+      </div>
+      <div class="btn-refine-wrap">
+        <button type="button" class="btn-refine" id="btnRefine">提纯</button>
+      </div>
+    </section>
+
+    <section class="panel golden-panel right-panel" id="goldenPanel">
+      <h2>内容可视化大纲</h2>
+      <div class="chart-container note-card" id="chartContainer" style="display: none;">
+        <div id="mermaid-chart" class="mermaid-wrap"></div>
+      </div>
+      <div class="outline-content" id="outlineContent">
+        <p class="outline-placeholder">点击「提纯」后，AI 会根据左侧文稿生成逻辑清晰的可视化大纲（支持 Markdown 列表与层级），显示在这里。</p>
+      </div>
+    </section>
+
+    <section class="panel opening-section">
+      <h2>🎙️ 播客开场白</h2>
+      <p class="opening-text" id="openingText" data-placeholder="点击「提纯」后，AI 会根据左侧笔记生成开场白，显示在这里。">
+        大家好，今天想跟大家聊一本书，叫《中国的十个名字》。你可能会想：中国不就一个名字吗？其实不是——「中国」这个词，最早在青铜器上出现的时候，写的可是「宅兹中国」，意思大概是「就在这儿，天下的中心」。那时候的「中国」更像一个<span class="highlight">地址</span>，还不是我们现在的国名。书里还有特别有意思的两件事：波斯人老早就把中国想象成遍地美人的地方；还有马可·波罗，在中国待了那么久，游记里居然几乎没提喝茶，这事儿到现在还有人在吵他到底来没来过。我们就从这几个名字、几段想象，聊聊「中国」是怎么被叫出来的，以及别人眼里的我们是什么样的。
+      </p>
+    </section>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script>
+    (function () {
+      var focusToggle = document.getElementById('focusToggle');
+      var notesEditor = document.getElementById('notesEditor');
+      var notesWrap = document.getElementById('notesWrap');
+      var lineHighlight = document.getElementById('lineHighlight');
+      var btnRefine = document.getElementById('btnRefine');
+      var outlineContent = document.getElementById('outlineContent');
+      var goldenPanel = document.getElementById('goldenPanel');
+      var chartContainer = document.getElementById('chartContainer');
+      var mermaidChartEl = document.getElementById('mermaid-chart');
+      var openingTextEl = document.getElementById('openingText');
+      var defaultOpeningHtml = openingTextEl.innerHTML;
+      var defaultOutlineHtml = outlineContent.innerHTML;
+
+      function getNotesText() {
+        return (notesEditor.innerText || notesEditor.textContent || '').trim();
+      }
+
+      function setButtonLoading(loading) {
+        btnRefine.disabled = loading;
+        btnRefine.textContent = loading ? '正在头脑风暴中...' : '提纯';
+      }
+
+      function setOpening(str) {
+        if (str && str.trim()) {
+          openingTextEl.textContent = str.trim();
+        } else {
+          openingTextEl.innerHTML = defaultOpeningHtml;
+        }
+      }
+
+      function showError(msg) {
+        alert(msg);
+      }
+
+      // 高级笔记感配色：米色 + 淡紫色，与卡片风格一致
+      var themeColors = {
+        paper: '#f5f0e6',
+        ink: '#2c2c2c',
+        accent: '#8b6914',
+        accentLight: 'rgba(139, 105, 20, 0.15)',
+        cardBg: 'rgba(255, 252, 245, 0.95)',
+        lavender: '#e8e0f0',
+        lavenderBg: 'rgba(180, 160, 220, 0.2)'
+      };
+
+      // 若 data.visualCode 存在，在大纲卡片上方用 #mermaid-chart 容器 + mermaid.run() 渲染；否则平稳退回高级笔记卡片模式
+      function renderChartIfPresent(data) {
+        if (!chartContainer || !mermaidChartEl) return;
+        chartContainer.style.display = 'none';
+        mermaidChartEl.innerHTML = '';
+
+        var code = (data && data.visualCode != null) ? String(data.visualCode).trim() : '';
+        if (!code || typeof mermaid === 'undefined') {
+          return;
+        }
+
+        try {
+          chartContainer.style.display = 'block';
+          mermaidChartEl.innerHTML = '<div class="mermaid">' + code + '</div>';
+          mermaid.run({ querySelector: '#mermaid-chart .mermaid', suppressErrors: true }).catch(function () {
+            mermaidChartEl.innerHTML = '';
+            chartContainer.style.display = 'none';
+          });
+        } catch (e) {
+          mermaidChartEl.innerHTML = '';
+          chartContainer.style.display = 'none';
+        }
+      }
+
+      function setOutlineLoading(loading) {
+        if (loading) {
+          outlineContent.classList.add('is-loading');
+          outlineContent.innerHTML = '<p class="outline-placeholder">正在生成大纲…</p>';
+        } else {
+          outlineContent.classList.remove('is-loading');
+        }
+      }
+
+      // Markdown 转 HTML：优先 marked，否则用简单正则让圆点列表漂亮显示
+      function markdownToHtml(md) {
+        var raw = (md || '').trim();
+        if (!raw) return '';
+        if (typeof marked !== 'undefined') {
+          try {
+            marked.setOptions({ breaks: true });
+            var result = marked.parse(raw);
+            return result;
+          } catch (e) { /* fallback */ }
+        }
+        // 简单正则兜底：**粗体** -> <strong>，以 - 或 * 开头的行 -> <ul><li> 圆点列表
+        var withStrong = raw.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        if (/\n\s*[-*]\s+/m.test(withStrong)) {
+          return '<ul><li>' + withStrong.replace(/\n\s*[-*]\s+/g, '</li><li>') + '</li></ul>';
+        }
+        return '<p>' + withStrong.replace(/\n/g, '</p><p>') + '</p>';
+      }
+
+      // 将大纲 HTML 赋给右侧「内容可视化大纲」区域，并关闭加载提示
+      function applyOutlineToPanel(html) {
+        var el = document.getElementById('outlineContent');
+        el.classList.remove('fade-in', 'is-loading');
+        el.innerHTML = html;
+        el.offsetHeight;
+        el.classList.add('fade-in');
+        setOutlineLoading(false);
+      }
+
+      // 支持 Markdown：加粗 **关键词** 与缩进子列表，转成 HTML（并做转义防 XSS）
+      function escapeHtml(s) {
+        return String(s)
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      }
+      function richLineToHtml(line) {
+        var parts = line.split(/\*\*(.+?)\*\*/g);
+        for (var i = 0; i < parts.length; i++) {
+          parts[i] = escapeHtml(parts[i]);
+          if (i % 2 === 1) parts[i] = '<strong>' + parts[i] + '</strong>';
+        }
+        return parts.join('');
+      }
+
+      // 从文本中提取「说明」为 AI 洞察文案，并从正文中移除
+      function extractInsight(text) {
+        var m = text.match(/[（(]说明[：:]\s*([^）)]+)[）)]/);
+        if (!m) return { insight: '', main: text };
+        var insight = m[1].trim();
+        var main = text.replace(/[（(]说明[：:]\s*[^）)]+[）)]/g, '').trim().replace(/\s*\.\s*$/, '').replace(/\s{2,}/g, ' ');
+        return { insight: insight, main: main };
+      }
+
+      // 单条内容转卡片 HTML：子列表 + 加粗，首行作为核心句
+      function buildCardBody(raw) {
+        var lines = String(raw).split(/\n/);
+        var mainParts = [];
+        var subParts = [];
+        var firstLine = true;
+        for (var i = 0; i < lines.length; i++) {
+          var line = lines[i];
+          if (/^\s+[-*]\s+/.test(line)) {
+            subParts.push(line.replace(/^\s+[-*]\s+/, '').trim());
+          } else {
+            if (subParts.length) {
+              mainParts.push('<ul>' + subParts.map(function (s) { return '<li>' + richLineToHtml(s) + '</li>'; }).join('') + '</ul>');
+              subParts = [];
+            }
+            if (line.trim()) {
+              var html = richLineToHtml(line.trim());
+              if (firstLine) {
+                mainParts.push('<div class="core-line">' + html + '</div>');
+                firstLine = false;
+              } else {
+                mainParts.push('<div>' + html + '</div>');
+              }
+            }
+          }
+        }
+        if (subParts.length) mainParts.push('<ul>' + subParts.map(function (s) { return '<li>' + richLineToHtml(s) + '</li>'; }).join('') + '</ul>');
+        return mainParts.join('');
+      }
+
+      // 用 data.items 循环生成「高级笔记卡片」：每条独立卡片，说明→AI 洞察标签
+      function renderOutlineFromItems(items) {
+        if (!Array.isArray(items) || items.length === 0) {
+          applyOutlineToPanel('<p class="outline-placeholder">暂无大纲数据，请重试或检查输入。</p>');
+          return;
+        }
+        var cards = items.map(function (item) {
+          var raw = typeof item === 'string' ? item : (item && item.text != null ? item.text : String(item));
+          var parsed = extractInsight(raw);
+          var tagHtml = parsed.insight ? '<span class="insight-tag">' + escapeHtml(parsed.insight) + '</span>' : '';
+          var bodyHtml = buildCardBody(parsed.main);
+          return '<div class="outline-card">' + tagHtml + bodyHtml + '</div>';
+        }).join('');
+        applyOutlineToPanel('<div class="outline-cards">' + cards + '</div>');
+      }
+
+      btnRefine.addEventListener('click', function () {
+        var notes = getNotesText();
+        if (!notes) {
+          showError('亲爱的制作人，请先输入灵感');
+          return;
+        }
+
+        setButtonLoading(true);
+        goldenPanel.classList.add('thinking');
+        setOutlineLoading(true);
+        openingTextEl.textContent = '正在生成大纲和开场白……';
+
+        // 同源时用相对路径；file:// 或 origin 为 null 时请求本地 Node 后端，避免 Failed to fetch
+        var origin = window.location.origin;
+        var isSameOrigin = origin && origin.startsWith('http');
+        var apiBase = isSameOrigin ? '' : ('http://localhost:' + (window.PODCAST_API_PORT || '3001'));
+        fetch(apiBase + '/api/claude', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notes: notes })
+        })
+          .then(function (res) {
+            return res.json().then(function (data) {
+              if (!res.ok) throw new Error(data.error || '请求失败');
+              return data;
+            });
+          })
+          .then(function (data) {
+            goldenPanel.classList.remove('thinking');
+            console.log('收到的全部数据:', data);
+            // 图表判断：若为图表代码则用 Mermaid/Chart.js 渲染，否则显示文字大纲
+            renderChartIfPresent(data);
+            if (Array.isArray(data.items) && data.items.length > 0) {
+              renderOutlineFromItems(data.items);
+            } else {
+              renderOutlineFromItems(null);
+            }
+            setOpening(data.opening != null ? data.opening : '');
+          })
+          .catch(function (err) {
+            goldenPanel.classList.remove('thinking');
+            setOutlineLoading(false);
+            var msg = err.message || '提纯失败';
+            if (err.message === 'Failed to fetch' || err.name === 'TypeError') {
+              msg = '无法连接 API。请先在终端运行 npm start，再在浏览器打开 http://localhost:3001 使用本页。';
+            }
+            showError(msg);
+            renderOutlineFromItems(null);
+            setOpening('');
+          })
+          .finally(function () {
+            setButtonLoading(false);
+          });
+      });
+
+      // ADHD 专注模式开关
+      function setFocusMode(on) {
+        document.body.classList.toggle('focus-mode', on);
+        focusToggle.classList.toggle('on', on);
+        focusToggle.setAttribute('aria-checked', on ? 'true' : 'false');
+      }
+      focusToggle.addEventListener('click', function () {
+        setFocusMode(!document.body.classList.contains('focus-mode'));
+      });
+      focusToggle.addEventListener('keydown', function (e) {
+        if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault();
+          setFocusMode(!document.body.classList.contains('focus-mode'));
+        }
+      });
+
+      // 根据光标位置高亮当前行
+      function updateLineHighlight() {
+        var sel = window.getSelection();
+        if (!sel.rangeCount || !notesWrap.contains(sel.anchorNode)) {
+          notesWrap.classList.remove('has-caret');
+          return;
+        }
+        notesWrap.classList.add('has-caret');
+        var range = sel.getRangeAt(0).cloneRange();
+        range.collapse(true);
+        var rect = range.getBoundingClientRect();
+        var wrapRect = notesWrap.getBoundingClientRect();
+        var lineHeight = 1.7; // 与 .notes-editor line-height 一致
+        var heightPx = rect.height > 0 ? rect.height : (getComputedStyle(notesEditor).fontSize.slice(0, -2) * lineHeight);
+        lineHighlight.style.top = (rect.top - wrapRect.top + notesWrap.scrollTop) + 'px';
+        lineHighlight.style.height = heightPx + 'px';
+      }
+
+      notesEditor.addEventListener('input', updateLineHighlight);
+      notesEditor.addEventListener('click', updateLineHighlight);
+      notesEditor.addEventListener('keyup', updateLineHighlight);
+      notesEditor.addEventListener('focus', updateLineHighlight);
+      notesWrap.addEventListener('scroll', updateLineHighlight);
+      document.addEventListener('selectionchange', function () {
+        if (notesEditor.contains(window.getSelection().anchorNode)) updateLineHighlight();
+      });
+    })();
+  </script>
+</body>
+</html>
