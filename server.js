@@ -274,19 +274,24 @@ app.get('/api/health', async (req, res) => {
   });
 });
 
-app.listen(PORT, '0.0.0.0', async () => {
-  console.log('播客助手已启动: http://localhost:' + PORT);
-  console.log('请务必在浏览器打开上述地址使用（不要直接双击 index.html，否则会 Failed to fetch）');
-  if (DEEPSEEK_API_KEY) {
-    console.log('当前使用 DeepSeek 引擎');
-  } else {
-    const ollamaOk = await isOllamaAvailable();
-    if (ollamaOk) {
-      console.log('当前使用: 本地 Ollama（无需 API Key），模型: ' + OLLAMA_MODEL);
+// 本地直接运行才 listen；Vercel 上通过 api/index.js 调用 app，不执行 listen
+if (!process.env.VERCEL) {
+  app.listen(PORT, '0.0.0.0', async () => {
+    console.log('播客助手已启动: http://localhost:' + PORT);
+    console.log('请务必在浏览器打开上述地址使用（不要直接双击 index.html，否则会 Failed to fetch）');
+    if (DEEPSEEK_API_KEY) {
+      console.log('当前使用 DeepSeek 引擎');
     } else {
-      console.warn('警告: 未配置 DEEPSEEK_API_KEY 且 Ollama 未运行。请任选其一：');
-      console.warn('  1) 在 .env 中填入 DEEPSEEK_API_KEY（推荐，国内好申请、便宜）');
-      console.warn('  2) 安装并启动 Ollama: https://ollama.com ，然后运行如 ollama run qwen2.5:7b');
+      const ollamaOk = await isOllamaAvailable();
+      if (ollamaOk) {
+        console.log('当前使用: 本地 Ollama（无需 API Key），模型: ' + OLLAMA_MODEL);
+      } else {
+        console.warn('警告: 未配置 DEEPSEEK_API_KEY 且 Ollama 未运行。请任选其一：');
+        console.warn('  1) 在 .env 中填入 DEEPSEEK_API_KEY（推荐，国内好申请、便宜）');
+        console.warn('  2) 安装并启动 Ollama: https://ollama.com ，然后运行如 ollama run qwen2.5:7b');
+      }
     }
-  }
-});
+  });
+}
+
+export default app;
