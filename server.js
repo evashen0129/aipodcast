@@ -1,5 +1,8 @@
-// 最先加载 .env，避免未配置 API Key（本地安全配置，见 .env.example 与 启动说明.md）
-import 'dotenv/config';
+// 本地加载 .env；Vercel 上由平台注入环境变量，不加载 dotenv 避免冷启动异常
+import dotenv from 'dotenv';
+if (typeof process !== 'undefined' && process.env && !process.env.VERCEL) {
+  try { dotenv.config(); } catch (_) { /* 忽略 */ }
+}
 
 import cors from 'cors';
 import express from 'express';
@@ -285,10 +288,16 @@ app.post('/api/claude', async (req, res) => {
     }
 
     const { outline, opening, items, visualCode } = parseAIResponse(text);
+    const normalizedItems = Array.isArray(items) && items.length > 0
+      ? items.map(normalizeItemForFrontend)
+      : undefined;
+    const outlineStr = normalizedItems
+      ? itemsToOutline(normalizedItems.map((x) => x.text))
+      : (typeof outline === 'string' ? outline : '');
     const jsonResponse = {
-      outline: typeof outline === 'string' ? outline : '',
+      outline: outlineStr,
       opening: typeof opening === 'string' ? opening : '',
-      items: Array.isArray(items) ? items : undefined,
+      items: normalizedItems,
       visualCode: visualCode || ''
     };
     console.log('AI返回的完整数据:', jsonResponse);
@@ -310,8 +319,11 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// 健康检查：用于确认服务已启动，并显示当前使用的模型来源
+// 健康检查：用于确认服务已启动；Vercel 上不请求 Ollama 避免超时/崩溃
 app.get('/api/health', async (req, res) => {
+  if (process.env.VERCEL) {
+    return res.json({ ok: true, provider: DEEPSEEK_API_KEY ? 'deepseek' : 'vercel', vercel: true });
+  }
   const ollamaOk = await isOllamaAvailable();
   const provider = DEEPSEEK_API_KEY ? 'deepseek' : (ollamaOk ? 'ollama' : 'none');
   res.json({
