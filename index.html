@@ -243,13 +243,20 @@
 
     .opening-section .opening-text {
       margin: 0;
-      padding: 1rem 1.25rem;
-      font-size: 1rem;
-      line-height: 1.8;
+      padding: 1.25rem 1.5rem;
+      font-size: 1.05rem;
+      line-height: 2;
       color: var(--ink);
       background: rgba(255, 252, 245, 0.95);
       border-radius: 8px;
       border: 1px solid rgba(180, 170, 150, 0.3);
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      word-break: break-word;
+      overflow-wrap: break-word;
+      font-family: "Noto Serif SC", "Source Han Serif SC", serif;
+      letter-spacing: 0.02em;
+      max-width: 100%;
     }
 
     .opening-text .highlight {
@@ -648,6 +655,36 @@
         applyOutlineToPanel('<div class="outline-cards">' + cards + '</div>');
       }
 
+      // 当 API 只返回 outline 字符串（无 items）时：解析为列表并渲染为卡片，避免显示「暂无数据」
+      function renderOutlineFromString(outlineStr) {
+        var raw = (outlineStr && typeof outlineStr === 'string') ? outlineStr.trim() : '';
+        if (!raw) {
+          applyOutlineToPanel('<p class="outline-placeholder">暂无大纲数据，请重试或检查输入。</p>');
+          return;
+        }
+        // 按 Markdown 列表项拆分（- 或 * 开头的行，支持行首空格）
+        var bulletRegex = /\n\s*[-*]\s+/;
+        var segments = raw.split(bulletRegex);
+        var first = segments[0] ? segments[0].trim() : '';
+        // 若首段不是列表项（没有前导 - *），则整段作为第一项
+        if (first && !/^\s*[-*]\s+/.test(raw)) {
+          segments = [first].concat(segments.slice(1).filter(function (s) { return s.trim(); }));
+        } else {
+          segments = segments.filter(function (s) { return s.trim(); });
+        }
+        if (segments.length === 0) {
+          segments = [raw];
+        }
+        var cards = segments.map(function (segment) {
+          var text = segment.replace(/^\s*[-*]\s+/, '').trim();
+          var parsed = extractInsight(text || segment);
+          var tagHtml = parsed.insight ? '<span class="insight-tag">' + escapeHtml(parsed.insight) + '</span>' : '';
+          var bodyHtml = buildCardBody(parsed.main);
+          return '<div class="outline-card">' + tagHtml + bodyHtml + '</div>';
+        }).join('');
+        applyOutlineToPanel('<div class="outline-cards">' + cards + '</div>');
+      }
+
       btnRefine.addEventListener('click', function () {
         var notes = getNotesText();
         if (!notes) {
@@ -682,6 +719,8 @@
             renderChartIfPresent(data);
             if (Array.isArray(data.items) && data.items.length > 0) {
               renderOutlineFromItems(data.items);
+            } else if (data.outline && String(data.outline).trim()) {
+              renderOutlineFromString(data.outline);
             } else {
               renderOutlineFromItems(null);
             }
