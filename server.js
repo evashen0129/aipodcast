@@ -119,7 +119,8 @@ function itemsToOutline(items) {
 /** 尝试从 AI 返回中解析 JSON；支持 items/opening 及 visualData */
 function parseAIResponse(text) {
   const raw = (text || '').trim();
-  let jsonStr = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+  const tick = '\x60'; // 反引号，避免源码中出现 ``` 导致部分环境误解析为模板字符串
+  let jsonStr = raw.replace(new RegExp('^' + tick + tick + tick + '(?:json)?\\s*', 'i'), '').replace(new RegExp('\\s*' + tick + tick + tick + '$'), '').trim();
   try {
     const obj = JSON.parse(jsonStr);
     let outline = '';
