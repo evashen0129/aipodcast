@@ -501,9 +501,18 @@
         btnRefine.textContent = loading ? '正在头脑风暴中...' : '提纯';
       }
 
+      // 将 API 可能返回的字面量 \n、\r、\t 转为真实换行/制表符，避免页面上显示成 "\n" 等
+      function unescapeLiteralNewlines(s) {
+        return String(s)
+          .replace(/\\n/g, '\n')
+          .replace(/\\r/g, '\r')
+          .replace(/\\t/g, '\t');
+      }
+
       function setOpening(str) {
-        if (str && str.trim()) {
-          openingTextEl.textContent = str.trim();
+        if (str != null && String(str).trim()) {
+          var s = unescapeLiteralNewlines(String(str).trim());
+          openingTextEl.textContent = s;
         } else {
           openingTextEl.innerHTML = defaultOpeningHtml;
         }
@@ -609,9 +618,9 @@
         return { insight: insight, main: main };
       }
 
-      // 单条内容转卡片 HTML：子列表 + 加粗，首行作为核心句
+      // 单条内容转卡片 HTML：子列表 + 加粗，首行作为核心句（先统一把字面量 \n 转为真实换行）
       function buildCardBody(raw) {
-        var lines = String(raw).split(/\n/);
+        var lines = unescapeLiteralNewlines(String(raw)).split(/\n/);
         var mainParts = [];
         var subParts = [];
         var firstLine = true;
@@ -657,7 +666,7 @@
 
       // 当 API 只返回 outline 字符串（无 items）时：解析为列表并渲染为卡片，避免显示「暂无数据」
       function renderOutlineFromString(outlineStr) {
-        var raw = (outlineStr && typeof outlineStr === 'string') ? outlineStr.trim() : '';
+        var raw = (outlineStr != null && typeof outlineStr === 'string') ? unescapeLiteralNewlines(outlineStr).trim() : '';
         if (!raw) {
           applyOutlineToPanel('<p class="outline-placeholder">暂无大纲数据，请重试或检查输入。</p>');
           return;
@@ -719,12 +728,13 @@
             renderChartIfPresent(data);
             if (Array.isArray(data.items) && data.items.length > 0) {
               renderOutlineFromItems(data.items);
-            } else if (data.outline && String(data.outline).trim()) {
+            } else if (data.outline != null && String(data.outline).trim()) {
               renderOutlineFromString(data.outline);
             } else {
               renderOutlineFromItems(null);
             }
-            setOpening(data.opening != null ? data.opening : '');
+            var openingRaw = data.opening != null ? data.opening : (data.summary != null ? data.summary : '');
+            setOpening(openingRaw);
           })
           .catch(function (err) {
             goldenPanel.classList.remove('thinking');
