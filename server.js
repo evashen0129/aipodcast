@@ -130,12 +130,29 @@ function normalizeItemForFrontend(item) {
   const insight = item['互动建议'] ?? item.insight ?? '';
   const parts = [];
   if (core) parts.push(String(core).trim());
-  if (logic) parts.push(String(logic).trim());
+  if (logic) {
+    const lines = String(logic).trim().split(/\n/).filter(Boolean);
+    parts.push(lines.map((l) => (l.match(/^\s*[-*]\s+/) ? l : '  - ' + l).join('\n'));
+  }
   if (insight) parts.push(String(insight).trim());
   return { text: parts.join('\n') };
 }
 
-/** 尝试从 AI 返回中解析 JSON；支持 items/opening 及 visualData */
+/** 若 outline 是「字符串化的 JSON」（AI 有时会这样返回），解析出 items/opening/visualCode */
+function parseOutlineIfStringified(outlineStr) {
+  if (typeof outlineStr !== 'string' || !outlineStr.trim()) return null;
+  const s = outlineStr.trim();
+  if ((s.startsWith('{') && s.endsWith('}')) || (s.startsWith('[') && s.endsWith(']'))) {
+    try {
+      return JSON.parse(s);
+    } catch (_) {
+      return null;
+    }
+  }
+  return null;
+}
+
+/** 尝试从 AI 返回中解析 JSON；支持 items/opening 及 visualData；兼容 outline 被字符串化的情况 */
 function parseAIResponse(text) {
   const raw = (text || '').trim();
   const tick = '\x60'; // 反引号，避免源码中出现 ``` 导致部分环境误解析为模板字符串
@@ -155,6 +172,22 @@ function parseAIResponse(text) {
       opening = typeof obj.summary === 'string' ? obj.summary : (typeof obj.opening === 'string' ? obj.opening : '');
       if (obj.visualCode != null && String(obj.visualCode).trim() !== '') {
         visualCode = String(obj.visualCode).trim();
+      }
+      // AI 有时把整段 JSON 放在 outline 里（字符串化的 JSON），需再解析一次
+      if ((!items || !opening) && outline && outline.trim()) {
+        const inner = parseOutlineIfStringified(outline);
+        if (inner) {
+          if (Array.isArray(inner.items) && inner.items.length > 0) {
+            items = inner.items;
+            outline = itemsToOutline(inner.items);
+          }
+          if (opening === '' && (inner.opening != null || inner.summary != null)) {
+            opening = typeof inner.opening === 'string' ? inner.opening : (typeof inner.summary === 'string' ? inner.summary : '');
+          }
+          if (!visualCode && inner.visualCode != null && String(inner.visualCode).trim() !== '') {
+            visualCode = String(inner.visualCode).trim();
+          }
+        }
       }
     }
     if (outline !== '' || opening !== '' || items) {
@@ -252,16 +285,10 @@ app.post('/api/claude', async (req, res) => {
     }
 
     const { outline, opening, items, visualCode } = parseAIResponse(text);
-    const normalizedItems = Array.isArray(items) && items.length > 0
-      ? items.map(normalizeItemForFrontend)
-      : undefined;
-    const outlineStr = normalizedItems
-      ? itemsToOutline(normalizedItems.map((x) => x.text))
-      : (typeof outline === 'string' ? outline : '');
     const jsonResponse = {
-      outline: outlineStr,
+      outline: typeof outline === 'string' ? outline : '',
       opening: typeof opening === 'string' ? opening : '',
-      items: normalizedItems,
+      items: Array.isArray(items) ? items : undefined,
       visualCode: visualCode || ''
     };
     console.log('AI返回的完整数据:', jsonResponse);

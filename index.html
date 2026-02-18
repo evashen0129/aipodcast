@@ -726,14 +726,29 @@
             console.log('收到的全部数据:', data);
             // 图表判断：若为图表代码则用 Mermaid/Chart.js 渲染，否则显示文字大纲
             renderChartIfPresent(data);
+            var outlineStr = data.outline != null ? String(data.outline).trim() : '';
+            var openingRaw = data.opening != null ? data.opening : (data.summary != null ? data.summary : '');
             if (Array.isArray(data.items) && data.items.length > 0) {
               renderOutlineFromItems(data.items);
-            } else if (data.outline != null && String(data.outline).trim()) {
+            } else if (outlineStr && (outlineStr.startsWith('{') || outlineStr.startsWith('['))) {
+              try {
+                var parsed = JSON.parse(outlineStr);
+                if (parsed && Array.isArray(parsed.items) && parsed.items.length > 0) {
+                  renderOutlineFromItems(parsed.items);
+                  if (!openingRaw && (parsed.opening != null || parsed.summary != null)) {
+                    openingRaw = parsed.opening != null ? parsed.opening : parsed.summary;
+                  }
+                } else {
+                  renderOutlineFromString(outlineStr);
+                }
+              } catch (e) {
+                renderOutlineFromString(outlineStr);
+              }
+            } else if (outlineStr) {
               renderOutlineFromString(data.outline);
             } else {
               renderOutlineFromItems(null);
             }
-            var openingRaw = data.opening != null ? data.opening : (data.summary != null ? data.summary : '');
             setOpening(openingRaw);
           })
           .catch(function (err) {
