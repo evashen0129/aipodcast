@@ -50,7 +50,7 @@ const SYSTEM_PROMPT = [
   '3. **互动建议**（可选）：括号里用「说明：」写一句给主播的提示，会显示为「AI 洞察」小标签。例如：（说明：用充满异域风情的诗意比喻，瞬间勾起好奇）',
   '',
   '单条示例（一条里含核心金句、子列表、说明）：',
-  '"**宅兹中国**——何尊铭文里最早出现的"中国"，指地理中心而非国名。\\n  - 周武王时期；青铜器铭文证据\\n  - 从地名到国名的演变（说明：可对比今日「中国」一词的用法引发听众共鸣）"',
+  '"**宅兹中国**——何尊铭文里最早出现的\\"中国\\"，指地理中心而非国名。\\n  - 周武王时期；青铜器铭文证据\\n  - 从地名到国名的演变（说明：可对比今日「中国」一词的用法引发听众共鸣）"',
   '',
   '【丰富度与格式】',
   '- 主要点位不得少于 5 条；每条都要有**核心金句**和**逻辑拆解**，尽量带**互动建议**（说明：…）。',
@@ -64,7 +64,7 @@ const SYSTEM_PROMPT = [
   '- **如果没有时间线或逻辑流程**：在 **visualCode** 中生成一段**简单的思维导图 Mermaid 代码**（mindmap 语法），概括文稿要点。',
   '',
   '示例（有流程）：{"items":[...],"opening":"...","visualCode":"graph TD\\n  A[起点]-->B[过程]\\n  B-->C[结果]"}',
-  '示例（思维导图保底）：{"items":[...],"opening":"...","visualCode":"mindmap\\n  root((文稿))\\n    要点1\\n    要点2\\n    要点3"}',
+  '示例（思维导图保底）：{"items":[...],"opening":"...","visualCode":"mindmap\\n  root(文稿)\\n    要点1\\n    要点2\\n    要点3"}',
   '只输出上述 JSON 一行。',
   '只输出 JSON，严禁包含 Markdown 代码块。'
 ].join('\n');
@@ -135,7 +135,8 @@ function normalizeItemForFrontend(item) {
   if (core) parts.push(String(core).trim());
   if (logic) {
     const lines = String(logic).trim().split(/\n/).filter(Boolean);
-    parts.push(lines.map((l) => (l.match(/^\s*[-*]\s+/) ? l : '  - ' + l).join('\n'));
+    const bulletRe = /^\s*[-*]\s+/;
+    parts.push(lines.map((l) => (bulletRe.test(l) ? l : '  - ' + l)).join('\n'));
   }
   if (insight) parts.push(String(insight).trim());
   return { text: parts.join('\n') };
