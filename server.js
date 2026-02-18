@@ -35,7 +35,7 @@ const SYSTEM_PROMPT = [
   '',
   '你的任务：',
   '1. **深度阅读**她提供的文稿/读书笔记，按「核心金句 + 逻辑拆解 + 互动建议」结构输出大纲（items）。',
-  '2. 再写一段**播客开场白**（opening），口语化、有钩子，约 150–250 字。',
+  '2. 再写一段**播客开场白**（opening），口语化、有钩子，约 150–250 字。开场白中不要使用占位符（如 XX、XXX、填空），请直接写出完整可用的开场白。',
   '',
   '---',
   '',
@@ -117,6 +117,22 @@ function itemsToOutline(items) {
     const text = typeof item === 'string' ? item : (item && typeof item === 'object' && item.text != null ? item.text : String(item));
     return '- ' + String(text).trim();
   }).join('\n');
+}
+
+/** 把 AI 返回的 item（可能是 { 核心金句, 逻辑拆解 } 等中文键）转成前端卡片需要的 { text: "..." } */
+function normalizeItemForFrontend(item) {
+  if (item == null) return { text: '' };
+  if (typeof item === 'string') return { text: item.trim() };
+  if (typeof item !== 'object') return { text: String(item) };
+  if (item.text != null && typeof item.text === 'string') return { text: item.text.trim() };
+  const core = item['核心金句'] ?? item.core ?? '';
+  const logic = item['逻辑拆解'] ?? item.logic ?? '';
+  const insight = item['互动建议'] ?? item.insight ?? '';
+  const parts = [];
+  if (core) parts.push(String(core).trim());
+  if (logic) parts.push(String(logic).trim());
+  if (insight) parts.push(String(insight).trim());
+  return { text: parts.join('\n') };
 }
 
 /** 尝试从 AI 返回中解析 JSON；支持 items/opening 及 visualData */
@@ -236,10 +252,16 @@ app.post('/api/claude', async (req, res) => {
     }
 
     const { outline, opening, items, visualCode } = parseAIResponse(text);
+    const normalizedItems = Array.isArray(items) && items.length > 0
+      ? items.map(normalizeItemForFrontend)
+      : undefined;
+    const outlineStr = normalizedItems
+      ? itemsToOutline(normalizedItems.map((x) => x.text))
+      : (typeof outline === 'string' ? outline : '');
     const jsonResponse = {
-      outline: typeof outline === 'string' ? outline : '',
+      outline: outlineStr,
       opening: typeof opening === 'string' ? opening : '',
-      items: Array.isArray(items) ? items : undefined,
+      items: normalizedItems,
       visualCode: visualCode || ''
     };
     console.log('AI返回的完整数据:', jsonResponse);
